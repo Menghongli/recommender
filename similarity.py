@@ -6,7 +6,9 @@ def euclidSim(inA, inB):
 
 def pearsSim(inA, inB):
     if len(inA) < 3 : return 1.0
-    return 0.5 + 0.5*corrcoef(inA, inB, rowvar = 0)[0][1]
+    cor = corrcoef(inA, inB, rowvar = 0)[0][1]
+    if isnan(cor): cor = 0
+    return 0.5 + 0.5*cor
 
 def cosSim(inA, inB):
     num = float(dot(inA, inB))

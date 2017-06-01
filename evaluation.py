@@ -24,5 +24,6 @@ class Evaluation:
 evaluation = Evaluation()
 evaluation.evalByAccuracy(recommender = rc.ItemBased(simMeasure=cosSim))
 evaluation.evalByAccuracy(recommender = rc.ItemBased(simMeasure=euclidSim))
+evaluation.evalByAccuracy(recommender = rc.ItemBased(simMeasure=pearsSim))
 evaluation.evalByAccuracy(recommender = rc.UserBased(simMeasure=cosSim))
 evaluation.evalByAccuracy(recommender = rc.UserBased(simMeasure=euclidSim))
