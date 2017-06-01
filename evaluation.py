@@ -5,25 +5,24 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 
 class Evaluation:
-    def __init__(self, recommender):
-        self.recommender = recommender
+    def __init__(self):
         self.dataMat = tool.loadUserMat()
         self.testMat = tool.loadUserTestMat()
 
-    def evalByAccuracy(self):
+    def evalByAccuracy(self, recommender):
         y_true = []
         y_pred = []
 
         for user, ratings in self.testMat.items():
             for book, rating in ratings.items():
                 y_true.append(float(self.dataMat[user][book]))
-                y_pred.append(self.recommender.predict(user, book))
+                y_pred.append(recommender.predict(user, book))
 
         rmse = sqrt(mean_squared_error(y_true, y_pred))
         print("Root Mean Squared Error: %f" % rmse)
 
-evaluation = Evaluation(recommender = rc.ItemBased(simMeasure=cosSim))
-evaluation.evalByAccuracy()
-
-evaluation1 = Evaluation(recommender = rc.ItemBased(simMeasure=euclidSim))
-evaluation1.evalByAccuracy()
+evaluation = Evaluation()
+evaluation.evalByAccuracy(recommender = rc.ItemBased(simMeasure=cosSim))
+evaluation.evalByAccuracy(recommender = rc.ItemBased(simMeasure=euclidSim))
+evaluation.evalByAccuracy(recommender = rc.UserBased(simMeasure=cosSim))
+evaluation.evalByAccuracy(recommender = rc.UserBased(simMeasure=euclidSim))
