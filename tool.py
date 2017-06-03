@@ -4,6 +4,7 @@ import gzip
 import random
 import numpy as np
 import scipy.io as sio
+import h5py
 
 def dumpDataMat():
     userMat = {}
@@ -72,7 +73,8 @@ def loadRating():
                 b_index = books[book]
                 ratingsMat[u_index][b_index] = rating
 
-    sio.savemat('ratings.mat', mdict={'ratings': ratingsMat}, do_compression=True)
+    with h5py.File('ratings.h5', 'w') as hf:
+        hf.create_dataset("Ratings",  data=ratingsMat)
 
 def loadUserMat():
     dataMat = None
