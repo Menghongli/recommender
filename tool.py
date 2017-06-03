@@ -3,6 +3,7 @@ import pickle as pk
 import gzip
 import random
 import numpy as np
+import scipy.io as sio
 
 def dumpDataMat():
     userMat = {}
@@ -71,7 +72,7 @@ def loadRating():
                 b_index = books[book]
                 ratingsMat[u_index][b_index] = rating
 
-    return users, books, ratingsMat
+    sio.savemat('ratings.mat', mdict={'ratings': ratingsMat}, do_compression=True)
 
 def loadUserMat():
     dataMat = None
