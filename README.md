@@ -12,7 +12,7 @@ The data is from a collection collected by the GroupLens research group.
 
 Book-Crossing [https://grouplens.org/datasets/book-crossing/]
 
-## Prepare
+## Preparation
 Download the data from GroupLens, uncompress the csv version into `/data` folder and then run the following scripts
 ```python
 from tool import *
