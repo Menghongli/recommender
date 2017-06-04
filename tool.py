@@ -3,8 +3,6 @@ import pickle as pk
 import gzip
 import random
 import numpy as np
-import scipy.io as sio
-import h5py
 
 def dumpDataMat():
     userMat = {}
@@ -50,10 +48,9 @@ def dumpDataMat():
     with gzip.open('BookMat.pklz', 'wb') as output:
         pk.dump(bookMat, output)
 
-def loadRating():
+def loadUsersBooks():
     users = None
     books = None
-    userMat = loadUserMat()
 
     with gzip.open('Users.pklz', 'rb') as input:
         users = pk.load(input)
@@ -61,20 +58,7 @@ def loadRating():
     with gzip.open('Books.pklz', 'rb') as input:
         books = pk.load(input)
 
-    n_users = len(users.keys())
-    n_books = len(books.keys())
-
-    ratingsMat = np.zeros(shape=(n_users, n_books), dtype=np.float64)
-
-    for user, ratings in userMat.items():
-        for book, rating in ratings.items():
-            if user in users.keys() and book in books.keys():
-                u_index = users[user]
-                b_index = books[book]
-                ratingsMat[u_index][b_index] = rating
-
-    with h5py.File('ratings.h5', 'w') as hf:
-        hf.create_dataset("Ratings",  data=ratingsMat)
+    return users, books
 
 def loadUserMat():
     dataMat = None
@@ -92,7 +76,7 @@ def loadBookMat():
 
 def loadUserTestMat():
     dataMat = loadUserMat();
-    testMat = dict(random.sample(dataMat.items(), 100))
+    testMat = dict(random.sample(dataMat.items(), 1000))
     for user, ratings in testMat.items():
         ratings = ratings.fromkeys(ratings, 0)
         testMat[user] = ratings

@@ -1,24 +1,23 @@
-from scipy import linalg as la
-
 import numpy as np
 import pickle as pk
 import tool
 import similarity
 import gzip
+import sys
 
 class Recommender:
     def __init__(self, dataMat, simMeasure):
         self.dataMat = dataMat
         self.simMeasure = simMeasure
 
-    def predict(self, user, book):
+    def predict(self, user, book, true_value):
         return None
 
 class ItemBased(Recommender):
     def __init__(self, simMeasure):
         Recommender.__init__(self, dataMat=tool.loadBookMat(), simMeasure=simMeasure)
 
-    def predict(self, user, book):
+    def predict(self, user, book, true_value):
         simTotal= 0.0; ratSimTotal = 0.0
         bookRatings = self.dataMat[book]
         for otherBook, ratings in self.dataMat.items():
@@ -46,7 +45,7 @@ class UserBased(Recommender):
     def __init__(self, simMeasure):
         Recommender.__init__(self, dataMat=tool.loadUserMat(), simMeasure=simMeasure)
 
-    def predict(self, user, book):
+    def predict(self, user, book, true_value):
         simTotal= 0.0; ratSimTotal = 0.0
         userRatings = self.dataMat[user]
         for otherUser, ratings in self.dataMat.items():
@@ -73,64 +72,81 @@ class UserBased(Recommender):
 
 class MatrixFactorization(Recommender):
     def __init__(self, K):
-        Recommender.__init__(self, dataMat=None, simMeasure=None)
+        Recommender.__init__(self, dataMat=tool.loadUserMat(), simMeasure=None)
         self.K = K
-        self.users, self.books, self.dataMat = tool.loadRating()
+        self.users, self.books = tool.loadUsersBooks()
         self.X, self.Q = self.train()
 
 
-    def train(self, steps=5000, alpha=0.0002, beta=0.02):
-        n_users = len(self.dataMat)
-        n_books = len(self.dataMat[0])
+    def train(self, steps=20, alpha=0.008, beta=0.02):
+        n_users = len(self.users.keys())
+        n_books = len(self.books.keys())
 
-        U,Sigma, VT = la.svds(self.dataMat, return_singular_vectors='u')
-        # Sig2 = Sigma**2
-        # totalEng = sum(Sig2) * 0.9
-        # dim = 0
+        # R = sp.csc_matrix(self.dataMat)
+        # U, s, Vt = la.svds(R)
+        # SigDim = np.mat(np.eye(6)*s)
+        # transformedUser = (R.T * U * SigDim.I).T
 
-        # for u in range(n_users):
-        #     if sum(Sig2[:u]) >= totalEng:
-        #         dim = u
-        #         break
-        SigDim = np.mat(np.eye(6)*Sigma[:6])
+        X_final = np.random.rand(n_users, self.K)
+        Q_final = np.random.rand(self.K, n_books)
 
-        transformedUser = (self.dataMat.T * U[:, :6] * SigDim.I).T
-
-        X = np.random.rand(n_users, self.K)
-        Q = np.random.rand(n_books, self.K)
-        Q = Q.T
+        cost = 0
 
         for step in range(steps):
-            print("Step: {}".format(step))
-            for i in range(dim):
-                print('.', end='', flush=True)
-                for j in range(n_books):
-                    if self.dataMat[i][j] > 0:
-                        er = np.dot(X[i,:], Q[:, j]) - self.dataMat[i][j]
+            X = X_final
+            Q = Q_final
+            count = 0
+            flag = False
+            for user, ratings in self.dataMat.items():
+                sys.stdout.write('\r')
+                sys.stdout.write("[%-80s] %d/%d" % ('=' * int((count/n_users) * 80), count, n_users-1))
+                sys.stdout.flush()
+                count += 1
+                for book, rate in ratings.items():
+                    if user in self.users.keys() and book in self.books.keys():
+                        i = self.users[user]
+                        j = self.books[book]
+                        er = np.dot(X[i,:], Q[:, j]) - rate
                         for k in range(self.K):
                             temp_x = X[i][k] - alpha * (er * Q[k][j] + beta * X[i][k])
                             temp_q = Q[k][j] - alpha * (er * X[i][k] + beta * Q[k][j])
 
                             X[i][k] = temp_x
                             Q[k][j] = temp_q
+            print()
 
-            cost = 0
-            for i in range(n_users):
-                for j in range(n_books):
-                    if self.dataMat[i][j] > 0:
-                        cost = cost + (self.dataMat[i][j] - np.dot(X[i,:],Q[:,j]))**2
-                        for k in range(self.K):
-                            cost = cost + beta * (X[i][k]**2 + Q[k][j]**2)
+            cost_hat = 0
+            for user, ratings in self.dataMat.items():
+                for book, rate in ratings.items():
+                    cost_hat += (rate - np.dot(X[i,:],Q[:,j]))**2
+                    for k in range(self.K):
+                        cost_hat += beta * (X[i][k]**2 + Q[k][j]**2)
 
-                        cost = cost/2
-            if cost < 0.1:
+                    cost_hat = cost_hat/2
+
+            print("Step: %d, Error: %f" % (step, cost_hat))
+            if cost_hat < 0.1:
+                X_final = X
+                Q_final = Q
                 break
 
-        return X, Q.T
+            if cost_hat >= cost and cost != 0:
+                if flag: break
+                else: flag = True
+            else:
+                flag = False
+                X_final = X
+                Q_final = Q
 
-    def predict(self, user, book):
-        R = np.dot(self.X, self.Q.T)
-        u_index = self.users[user]
-        b_index = self.books[book]
+            cost = cost_hat
 
-        return R[u_index][b_index]
+        return X_final, Q_final
+
+    def predict(self, user, book, true_value):
+        if user in self.users.keys() and book in self.books.keys():
+            u_index = self.users[user]
+            b_index = self.books[book]
+
+            return np.dot(self.X[u_index,:], self.Q[:, b_index])
+        else:
+            return true_value
